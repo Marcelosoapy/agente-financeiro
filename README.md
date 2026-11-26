@@ -40,7 +40,7 @@ Feito para rodar no **Cloudflare Workers** (plano gratuito).
 
 | Item | Fórmula |
 |---|---|
-| Conversão US$ → R$ | valor em US$ × dólar usado (PTAX de venda ou valor informado) |
+| Conversão US$ → R$ | valor em US$ × dólar usado (PTAX de venda com 2 casas decimais, cortada sem arredondar: 5,7750 → 5,77; ou o valor informado) |
 | Venda final (unitária) | preço de venda × (1 + margem de negociação %) |
 | Receita da venda | venda final × quantidade |
 | Custo da venda | preço de compra × quantidade |
@@ -188,6 +188,8 @@ Alternativa: o **Email Sending** do próprio Cloudflare também serve, mas para 
 
 ## 10. Personalizar
 
+- **Tema claro/escuro:** botão de sol/lua no cabeçalho e na tela de login. A escolha fica salva no navegador; sem escolha, segue o tema do sistema.
+- **Casas decimais da PTAX:** em `public/index.html`, função `duasCasas`.
 - **Intervalo de atualização da PTAX:** em `public/index.html`, procure `setInterval(updateRate, 120000)` (120000 ms = 2 min).
 - **Cache da cotação:** em `src/ptax.js`, `max-age=60` e `cacheTtl: 60` (segundos).
 - **Cores dos gráficos:** procure `#94a3b8` (custo), `#f59e0b` (comissão), `#22c55e` (lucro) e `#3b82f6` (receita) em `public/index.html`.
