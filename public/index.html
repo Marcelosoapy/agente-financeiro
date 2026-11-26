@@ -157,7 +157,9 @@ tr:hover td{background:var(--bg2)}
 @media(prefers-reduced-motion:reduce){.funil-barra{transition:none}}
 .srow{display:flex;align-items:center;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
 .srow input,.srow select{height:32px;font-size:12px;padding:0 10px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--txt)}
-.srow input{width:200px}
+.srow input{width:300px;max-width:100%}
+.obs-linha{display:block;font-size:11px;font-weight:400;color:var(--txt3);max-width:260px;white-space:normal}
+mark{background:#fde68a;color:#713f12;border-radius:2px;padding:0 1px}
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--txt);color:var(--bg);padding:9px 16px;border-radius:var(--radius);font-size:12px;font-weight:500;opacity:0;transform:translateY(8px);transition:all .2s;z-index:999;pointer-events:none;max-width:280px}
 .toast.on{opacity:1;transform:none}
 
@@ -421,7 +423,7 @@ tr:hover td{background:var(--bg2)}
 <!-- HISTÓRICO -->
 <div id="tab-lista" class="sec">
   <div class="srow">
-    <input type="text" id="busca" placeholder="Buscar produto ou categoria..." aria-label="Buscar">
+    <input type="text" id="busca" placeholder="Buscar produto, categoria ou observação..." aria-label="Buscar por produto, categoria ou observação">
     <select id="ordem" aria-label="Ordenar">
       <option value="date-desc">Mais recentes</option>
       <option value="date-asc">Mais antigas</option>
@@ -803,10 +805,32 @@ $('btn-save').addEventListener('click', async () => {
 $('busca').addEventListener('input', renderTable);
 $('ordem').addEventListener('change', renderTable);
 
+// Minúsculas e sem acentos: "Cotação" e "cotacao" são encontradas do mesmo jeito
+const normBusca = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+
+// Expressão da busca: um número é comparado por inteiro ("123" não encontra "1234")
+function regexBusca(q){
+  if(!q) return null;
+  let r = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if(/^\d/.test(q)) r = '(?<!\\d)' + r;
+  if(/\d$/.test(q)) r = r + '(?!\\d)';
+  return new RegExp(r);
+}
+
+// Destaca o trecho buscado no texto (o texto é escapado antes de virar HTML)
+function destacar(texto, re){
+  const t = String(texto||'');
+  const m = re && re.exec(normBusca(t));
+  if(!m) return esc(t);
+  const i = m.index, f = i + m[0].length;
+  return esc(t.slice(0,i)) + '<mark>' + esc(t.slice(i,f)) + '</mark>' + esc(t.slice(f));
+}
+
 function renderTable(){
-  const q = ($('busca').value||'').toLowerCase();
+  const q = regexBusca(normBusca($('busca').value).trim());
   const ord = $('ordem').value;
-  let vf = sales.filter(v => (v.produto+' '+(v.categoria||'')).toLowerCase().includes(q));
+  // busca em produto, categoria e observação, sem diferenciar acentos e maiúsculas
+  let vf = sales.filter(v => !q || q.test(normBusca([v.produto, v.categoria, v.obs].join(' '))));
   const sorters = {
     'date-desc':(a,b)=>b.data.localeCompare(a.data)||b.id-a.id,
     'date-asc':(a,b)=>a.data.localeCompare(b.data)||a.id-b.id,
@@ -826,8 +850,8 @@ function renderTable(){
         : `<button class="delbtn" data-ask="${v.id}" title="Excluir" aria-label="Excluir venda"><svg class="ic" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`;
       return `<tr>
         <td>${dp[2]}/${dp[1]}/${dp[0]}</td>
-        <td style="font-weight:500">${esc(v.produto)}</td>
-        <td>${esc(v.categoria||'—')}</td>
+        <td style="font-weight:500;white-space:normal">${destacar(v.produto,q)}${v.obs?`<span class="obs-linha">${destacar(v.obs,q)}</span>`:''}</td>
+        <td>${destacar(v.categoria||'—',q)}</td>
         <td class="num">${v.qtd}</td>
         <td class="num">${fmt(v.compra)}</td>
         <td class="num">${fmt(v.venda)}${v.margem?`<div style="font-size:10px;color:var(--txt3)">+${v.margem}% negoc.</div>`:''}</td>

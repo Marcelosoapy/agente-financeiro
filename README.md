@@ -25,7 +25,7 @@ Feito para rodar no **Cloudflare Workers** (plano gratuito).
 | Filtros | Tudo, hoje, 7 dias, 30 dias, mês atual ou intervalo de datas |
 | Gráficos | Receita por dia (custo + comissão + lucro), divisão da receita, receita e comissão por categoria |
 | Funil de produtos | Ranking dos produtos que mais vendem no período, por quantidade, receita ou lucro líquido |
-| Histórico | Busca, ordenação (data, lucro, receita, comissão) e exclusão |
+| Histórico | Busca por produto, categoria ou observação (sem diferenciar acentos e maiúsculas; números comparados por inteiro), ordenação e exclusão |
 
 **Fora do escopo (nesta versão)**
 
