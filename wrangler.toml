@@ -5,3 +5,18 @@ compatibility_date = "2026-11-01"
 [assets]
 directory = "./public"
 binding = "ASSETS"
+
+# Banco de dados (contas e vendas). Sem database_id: o Cloudflare cria o banco
+# automaticamente no primeiro deploy e mantém o vínculo nos deploys seguintes.
+[[d1_databases]]
+binding = "DB"
+database_name = "agente-financeiro-db"
+
+[vars]
+APP_NAME = "Agente de Vendas"
+# Remetente do e-mail de recuperação de senha (precisa ser de um domínio verificado no Resend).
+# Também é preciso cadastrar o segredo RESEND_API_KEY no painel do Cloudflare.
+MAIL_FROM = ""
+
+[observability]
+enabled = true

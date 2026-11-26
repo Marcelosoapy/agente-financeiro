@@ -1,6 +1,6 @@
 # Agente de Vendas
 
-Painel web para anotar vendas e acompanhar resultados: preço de compra e de venda (em R$ ou em US$), margem de negociação, comissão, lucro bruto e líquido, métricas por período e gráficos. A cotação do dólar vem da **PTAX oficial do Banco Central**, atualizada automaticamente.
+Painel web com login para anotar vendas e acompanhar resultados: preço de compra e de venda (em R$ ou em US$), margem de negociação, comissão, lucro bruto e líquido, métricas por período e gráficos. A cotação do dólar vem da **PTAX oficial do Banco Central**, atualizada automaticamente.
 
 Feito para rodar no **Cloudflare Workers** (plano gratuito).
 
@@ -14,7 +14,8 @@ Feito para rodar no **Cloudflare Workers** (plano gratuito).
 
 | Área | O que faz |
 |---|---|
-| Registro de vendas | Produto, categoria, quantidade, data, observações |
+| Contas de cliente | Criar conta, entrar e sair com e-mail e senha; recuperação de senha por e-mail |
+| Registro de vendas | Produto, categoria, quantidade, data, observações; salvas na conta do cliente |
 | Preços em R$ | Compra e venda em reais, com o equivalente em US$ pela PTAX |
 | Preços em US$ | Compra e venda em dólar, convertidas para R$ pela PTAX ou por um dólar informado |
 | Margem de negociação | % somada sobre o preço de venda para chegar à venda final |
@@ -27,11 +28,11 @@ Feito para rodar no **Cloudflare Workers** (plano gratuito).
 
 **Fora do escopo (nesta versão)**
 
-- Login e múltiplos usuários
-- Sincronizar vendas entre aparelhos (os dados ficam no navegador de cada aparelho)
+- Equipes (várias pessoas na mesma conta) e níveis de acesso
+- Editar uma venda já registrada (hoje: excluir e registrar de novo)
 - Emissão de nota fiscal, controle de estoque, exportação de relatórios
 
-**Possíveis próximas etapas:** banco de dados online (ex.: Cloudflare D1) para sincronizar aparelhos, exportação CSV/Excel, login, metas mensais.
+**Possíveis próximas etapas:** editar vendas, exportação CSV/Excel, trocar senha e e-mail logado, metas mensais, login com Google.
 
 ---
 
@@ -71,8 +72,13 @@ agente-financeiro/
 ├── public/
 │   └── index.html        # o painel completo (HTML, CSS e JavaScript)
 ├── src/
-│   ├── worker.js         # Worker: serve o painel e a rota /api/ptax
-│   └── ptax.js           # busca a PTAX no Banco Central
+│   ├── worker.js         # Worker: roteia /api/* e serve o painel
+│   ├── auth.js           # contas: criar, entrar, sair, esqueci e redefinir senha
+│   ├── vendas.js         # vendas do usuário logado (listar, criar, excluir)
+│   ├── db.js             # tabelas do banco D1 (criadas sozinhas no 1º acesso)
+│   ├── email.js          # e-mail de recuperação de senha (Resend)
+│   ├── ptax.js           # busca a PTAX no Banco Central
+│   └── util.js           # funções auxiliares
 ├── wrangler.toml         # configuração do Worker no Cloudflare
 ├── .gitignore
 └── README.md
@@ -94,6 +100,8 @@ Não há etapa de build: o Cloudflare publica os arquivos como estão. O único 
    - Root directory: `/`
 3. Clique em **Deploy**. Em cerca de 1 minuto o site estará em `https://agente-financeiro.SEU-SUBDOMINIO.workers.dev`.
 
+No primeiro deploy, o Cloudflare **cria sozinho o banco D1** `agente-financeiro-db` (o `wrangler.toml` declara o banco sem ID, e o Wrangler o provisiona). As tabelas são criadas na primeira vez que alguém usa o site.
+
 Cada `push` na branch `main` publica uma nova versão automaticamente.
 
 ### Opção B: pelo terminal (Wrangler)
@@ -111,26 +119,74 @@ Para testar no computador antes de publicar: `npx wrangler dev` e abra `http://l
 
 ---
 
-## 6. Conferir se está funcionando
+## 6. Recuperação de senha por e-mail (configurar uma vez)
+
+O link de "Esqueci minha senha" é enviado pelo **Resend** (resend.com, plano gratuito com 3.000 e-mails/mês). Sem essa configuração o site funciona normalmente, mas a tela de recuperação avisa o cliente que a recuperação ainda não foi ativada.
+
+1. Crie uma conta em **resend.com**.
+2. Em **Domains**, adicione o seu domínio (ex.: `suaempresa.com.br`) e cadastre os registros DNS que o Resend mostrar. Se o domínio já está no Cloudflare, o Resend oferece configurar automaticamente. **Sem domínio verificado o Resend só entrega e-mails para o seu próprio endereço**, então os clientes não receberiam o link.
+3. Em **API Keys**, crie uma chave com permissão de envio e copie (começa com `re_`).
+4. No Cloudflare: **Workers & Pages → agente-financeiro → Settings → Variables and Secrets → Add**:
+   - Type: **Secret** · Name: `RESEND_API_KEY` · Value: a chave do passo 3.
+5. No `wrangler.toml` do repositório, preencha o remetente com um endereço do domínio verificado:
+   ```toml
+   MAIL_FROM = "Agente de Vendas <nao-responda@suaempresa.com.br>"
+   ```
+   Faça o commit: o Cloudflare publica sozinho.
+
+Como funciona: o link vale **1 hora**, só pode ser usado **uma vez**, no máximo um e-mail por minuto por conta, e ao trocar a senha todas as sessões abertas são encerradas. A resposta da tela é a mesma exista o e-mail ou não, para ninguém descobrir quais e-mails têm conta.
+
+Alternativa: o **Email Sending** do próprio Cloudflare também serve, mas para enviar a qualquer destinatário exige o plano Workers Paid.
+
+---
+
+## 7. Conferir se está funcionando
 
 1. Abra `https://agente-financeiro.SEU-SUBDOMINIO.workers.dev/api/ptax`. Deve aparecer algo como:
    ```json
    {"fonte":"Banco Central do Brasil - PTAX","venda":5.3338,"compra":5.3332,"boletim":"Fechamento","dataHora":"2026-11-25 13:09:28.123","boletinsDoDia":5}
    ```
-2. Abra o site: o ponto do cartão do dólar deve ficar **verde**, com o tipo e o horário do boletim.
+2. Abra o site: aparece a tela **Entrar**. Clique em **Criar conta**, cadastre-se e registre uma venda.
+3. Saia, entre de novo (ou abra em outro aparelho) e confira que a venda continua lá.
+4. Depois de configurar o e-mail, teste **Esqueci minha senha** com a sua conta.
 
 ---
 
-## 7. Dados e privacidade
+## 8. Segurança e dados
 
-- As vendas ficam salvas no **navegador** (localStorage) de quem usa. Nada é enviado a servidores.
-- Limpar os dados do navegador apaga as vendas. Cada aparelho e cada navegador têm o seu próprio histórico.
-- Na primeira abertura aparecem vendas de exemplo. Exclua-as pelo Histórico.
-- O link do site é público: quem tiver o endereço consegue abrir o painel, mas só vê as vendas do próprio navegador.
+- **Senhas:** nunca são guardadas. O banco guarda só um hash PBKDF2-SHA256 (100.000 iterações, sal aleatório por usuário).
+- **Sessão:** cookie `HttpOnly`, `Secure` e `SameSite=Lax`, válido por 30 dias. O banco guarda só o hash do token. "Sair" encerra a sessão no servidor.
+- **Tentativas de login:** após 5 senhas erradas seguidas, aquele e-mail fica bloqueado por 15 minutos.
+- **Isolamento:** cada cliente só lê e exclui as próprias vendas; o servidor confere o dono em toda operação e recalcula a comissão.
+- **Outros sites:** pedidos que alteram dados vindos de outra origem são recusados.
+- **Onde ficam os dados:** no banco D1 da sua conta Cloudflare (**Storage & Databases → D1 → agente-financeiro-db**), onde dá para consultar e fazer backup (o Time Travel permite voltar o banco a um momento anterior: 7 dias no plano gratuito, 30 no pago).
+- **Apagar a conta de um cliente** (pelo console do D1):
+  ```sql
+  DELETE FROM vendas   WHERE user_id = (SELECT id FROM users WHERE email = 'cliente@email.com');
+  DELETE FROM sessions WHERE user_id = (SELECT id FROM users WHERE email = 'cliente@email.com');
+  DELETE FROM users    WHERE email = 'cliente@email.com';
+  ```
 
 ---
 
-## 8. Personalizar
+## 9. API (referência)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/ptax` | Cotação PTAX mais recente (pública) |
+| POST | `/api/auth/signup` | `{nome, email, senha}` cria a conta e entra |
+| POST | `/api/auth/login` | `{email, senha}` |
+| POST | `/api/auth/logout` | Encerra a sessão |
+| GET | `/api/auth/me` | Usuário logado |
+| POST | `/api/auth/forgot` | `{email}` envia o link de recuperação |
+| POST | `/api/auth/reset` | `{token, senha}` define a nova senha |
+| GET | `/api/vendas` | Vendas do usuário logado |
+| POST | `/api/vendas` | `{produto, categoria, qtd, compra, vendaBase, margem, comissaoPct, data, obs, inputMode, dolar, rateUsed}` |
+| DELETE | `/api/vendas/:id` | Exclui uma venda do usuário |
+
+---
+
+## 10. Personalizar
 
 - **Intervalo de atualização da PTAX:** em `public/index.html`, procure `setInterval(updateRate, 120000)` (120000 ms = 2 min).
 - **Cache da cotação:** em `src/ptax.js`, `max-age=60` e `cacheTtl: 60` (segundos).

@@ -141,15 +141,87 @@ tr:hover td{background:var(--bg2)}
 .srow input{width:200px}
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--txt);color:var(--bg);padding:9px 16px;border-radius:var(--radius);font-size:12px;font-weight:500;opacity:0;transform:translateY(8px);transition:all .2s;z-index:999;pointer-events:none;max-width:280px}
 .toast.on{opacity:1;transform:none}
+
+/* LOGIN */
+.hide{display:none!important}
+.auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:var(--bg2)}
+.auth-card{width:100%;max-width:390px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:28px 24px;box-shadow:var(--shadow)}
+.auth-card h1{font-size:21px;font-weight:600;margin-bottom:4px}
+.auth-card .sub{font-size:13px;color:var(--txt2);margin-bottom:20px;line-height:1.5}
+.auth-card .fg{margin-bottom:12px}
+.auth-card .fg input{height:44px;font-size:16px}
+.auth-msg{font-size:13px;line-height:1.45;padding:10px 12px;border-radius:var(--radius);margin-bottom:14px}
+.auth-msg.err{background:#fee2e2;color:#991b1b}
+.auth-msg.ok{background:#dcfce7;color:#166534}
+.auth-msg.info{background:var(--bg3);color:var(--txt)}
+.auth-links{display:flex;justify-content:space-between;gap:8px;margin-top:16px;flex-wrap:wrap}
+.linkbtn{background:none;border:none;color:var(--txt);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:13px;padding:6px 0;min-height:32px}
+.linkbtn:hover{color:var(--txt2)}
+.btn.primary{background:var(--txt);color:var(--bg);border-color:var(--txt);height:44px;font-size:14px}
+.btn.primary:hover{background:var(--txt);opacity:.88}
+.btn:disabled{opacity:.6;cursor:wait}
+.hint-senha{font-size:11px;color:var(--txt3);margin-top:4px}
+.user-box{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--txt2)}
+.user-box strong{color:var(--txt);font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty-hint{background:var(--bg2);border:0.5px dashed var(--border2);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:1rem;font-size:13px;color:var(--txt2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.loading{padding:3rem 1rem;text-align:center;color:var(--txt2);font-size:13px}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="loading" id="carregando">Carregando...</div>
+
+<!-- LOGIN / CONTA -->
+<div class="auth hide" id="auth">
+  <div class="auth-card">
+    <h1 id="auth-titulo">Entrar</h1>
+    <p class="sub" id="auth-sub">Acesse sua conta para registrar e acompanhar suas vendas.</p>
+    <div class="auth-msg hide" id="auth-msg" role="alert"></div>
+
+    <form id="form-login" class="auth-form" novalidate>
+      <div class="fg"><label for="l-email">E-mail</label><input type="email" id="l-email" autocomplete="email" required></div>
+      <div class="fg"><label for="l-senha">Senha</label><input type="password" id="l-senha" autocomplete="current-password" required></div>
+      <button class="btn primary" type="submit">Entrar</button>
+      <div class="auth-links">
+        <button type="button" class="linkbtn" data-view="signup">Criar conta</button>
+        <button type="button" class="linkbtn" data-view="forgot">Esqueci minha senha</button>
+      </div>
+    </form>
+
+    <form id="form-signup" class="auth-form hide" novalidate>
+      <div class="fg"><label for="s-nome">Nome</label><input type="text" id="s-nome" autocomplete="name" maxlength="80" required></div>
+      <div class="fg"><label for="s-email">E-mail</label><input type="email" id="s-email" autocomplete="email" required></div>
+      <div class="fg"><label for="s-senha">Senha</label><input type="password" id="s-senha" autocomplete="new-password" minlength="8" required><div class="hint-senha">Mínimo de 8 caracteres</div></div>
+      <div class="fg"><label for="s-senha2">Confirmar senha</label><input type="password" id="s-senha2" autocomplete="new-password" required></div>
+      <button class="btn primary" type="submit">Criar conta</button>
+      <div class="auth-links"><button type="button" class="linkbtn" data-view="login">Já tenho conta</button></div>
+    </form>
+
+    <form id="form-forgot" class="auth-form hide" novalidate>
+      <div class="fg"><label for="f-email-rec">E-mail da conta</label><input type="email" id="f-email-rec" autocomplete="email" required></div>
+      <button class="btn primary" type="submit">Enviar link de recuperação</button>
+      <div class="auth-links"><button type="button" class="linkbtn" data-view="login">Voltar para entrar</button></div>
+    </form>
+
+    <form id="form-reset" class="auth-form hide" novalidate>
+      <div class="fg"><label for="r-senha">Nova senha</label><input type="password" id="r-senha" autocomplete="new-password" minlength="8" required><div class="hint-senha">Mínimo de 8 caracteres</div></div>
+      <div class="fg"><label for="r-senha2">Confirmar nova senha</label><input type="password" id="r-senha2" autocomplete="new-password" required></div>
+      <button class="btn primary" type="submit">Salvar nova senha</button>
+      <div class="auth-links"><button type="button" class="linkbtn" data-view="login">Voltar para entrar</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="app hide" id="app">
 
 <div class="header">
   <div class="hinfo">
     <h1>Agente de Vendas</h1>
     <p>Controle de vendas, lucros, comissões e métricas</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+  <div class="user-box">
+    <span>Olá, <strong id="user-nome"></strong></span>
+    <button class="fb" id="btn-sair" type="button">Sair</button>
   </div>
   <div class="dolar-pill">
     <div>
@@ -170,6 +242,7 @@ tr:hover td{background:var(--bg2)}
         <svg class="ic" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.8 2.8 0 0 0-4-4L4 16v4M13.5 6.5l4 4"/></svg>
       </button>
     </div>
+  </div>
   </div>
 </div>
 
@@ -199,6 +272,10 @@ tr:hover td{background:var(--bg2)}
     <button class="fb" data-p="month">Este mês</button>
     <input type="date" id="d-ini" aria-label="Data inicial">
     <input type="date" id="d-fim" aria-label="Data final">
+  </div>
+  <div class="empty-hint hide" id="empty-hint">
+    <span>Nenhuma venda registrada ainda. Registre a primeira para ver as métricas e os gráficos.</span>
+    <button class="fb" type="button" id="btn-primeira">Registrar venda</button>
   </div>
   <div class="mgrid" id="metrics"></div>
   <div class="crow">
@@ -332,23 +409,24 @@ let pendingDel = null;
 let cDia, cPizza, cProd;
 const $ = id => document.getElementById(id);
 
-try { sales = JSON.parse(localStorage.getItem('sv3_sales') || '[]'); } catch(e){}
-sales.forEach(s => { if(s.comissao == null) s.comissao = 0; });
+let usuario = null;
 
-if (!sales.length) {
-  const d = n => { const dt=new Date(); dt.setDate(dt.getDate()-n); return dt.toISOString().split('T')[0]; };
-  const mk = (id,p,c,q,co,v,n,pc) => ({id,produto:p,categoria:c,qtd:q,compra:co,venda:v,data:d(n),obs:'',comissaoPct:pc,comissao:v*q*pc/100});
-  sales = [
-    mk(1,'Camisa polo M','Roupas',3,45,89,0,5),
-    mk(2,'Calça jeans','Roupas',2,80,149,1,5),
-    mk(3,'Tênis casual','Calçados',1,120,220,2,8),
-    mk(4,'Boné snapback','Acessórios',5,18,39,3,0),
-    mk(5,'Kit meias 3 pares','Roupas',4,12,24,5,0),
-    mk(6,'Cinto de couro','Acessórios',2,35,65,7,5),
-    mk(7,'Blusa moletom','Roupas',3,60,110,10,5),
-    mk(8,'Sandália feminina','Calçados',2,55,99,14,8),
-  ];
-  save();
+// Chamada à API do próprio site (envia o cookie de sessão)
+async function api(caminho, {method='GET', body} = {}){
+  const r = await fetch(caminho, {
+    method, credentials:'same-origin',
+    headers: body ? {'content-type':'application/json'} : {},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  let j = {};
+  try { j = await r.json(); } catch(e){}
+  if(!r.ok){
+    const e = new Error(j.erro || 'Não foi possível concluir. Verifique a conexão e tente de novo.');
+    e.status = r.status;
+    if(r.status===401 && usuario && !caminho.startsWith('/api/auth/')) sessaoExpirou();
+    throw e;
+  }
+  return j;
 }
 
 // ── UTILS ──────────────────────────────────────────────
@@ -358,7 +436,6 @@ const fmtRate = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionD
 const fmtPct = v => (v>=0?'+':'') + Number(v).toFixed(1) + '%';
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num = id => parseFloat($(id).value);
-function save(){ try{ localStorage.setItem('sv3_sales', JSON.stringify(sales)); }catch(e){} }
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); setTimeout(()=>t.classList.remove('on'),2600); }
 const lucroBruto = s => (s.venda - s.compra) * s.qtd;
 const lucroLiq = s => lucroBruto(s) - (s.comissao||0);
@@ -476,6 +553,7 @@ function getFiltered(){
 
 // ── METRICS ────────────────────────────────────────────
 function renderMetrics(){
+  $('empty-hint').classList.toggle('hide', sales.length > 0);
   const vf = getFiltered();
   const receita = vf.reduce((s,v)=>s+v.venda*v.qtd,0);
   const custo   = vf.reduce((s,v)=>s+v.compra*v.qtd,0);
@@ -507,6 +585,7 @@ const moneyTick = v => 'R$' + Number(v).toLocaleString('pt-BR');
 const tipMoney = { callbacks:{ label: c => ' ' + c.dataset.label + ': ' + fmt(c.raw) } };
 
 function renderCharts(vf, totalC, totalCom, totalL, totalR){
+  if(typeof Chart === 'undefined') return; // biblioteca de gráficos não carregou: o resto do painel segue funcionando
   const days = {};
   vf.forEach(v => {
     const o = days[v.data] || (days[v.data] = {c:0,m:0,l:0});
@@ -602,7 +681,7 @@ function calcPrev(){
   setPi('pi-p', pct, fmtPct(pct));
 }
 
-$('btn-save').addEventListener('click', () => {
+$('btn-save').addEventListener('click', async () => {
   const prod = $('f-prod').value.trim();
   const data = $('f-data').value;
   const {compra, venda:vendaBase} = getBrlPrices();
@@ -610,18 +689,24 @@ $('btn-save').addEventListener('click', () => {
     toast(inputMode==='usd' && !usdRate() ? 'Sem cotação do dólar: informe o valor usado na conversão.' : 'Preencha produto, preços e data.');
     return;
   }
-  const qtd = parseInt($('f-qtd').value)||1;
-  const margem = Math.max(num('f-margem')||0,0);
-  const comissaoPct = Math.max(num('f-comissao')||0,0);
-  const venda = vendaBase*(1+margem/100);
-  sales.push({ id:Date.now(), produto:prod, categoria:$('f-cat').value.trim(), qtd, compra, venda, vendaBase, data,
-    obs:$('f-obs').value.trim(), margem:margem||null, comissaoPct, comissao: venda*qtd*comissaoPct/100,
-    inputMode, dolar:dolarRate, rateUsed: inputMode==='usd' ? usdRate() : dolarRate });
-  save();
-  ['f-prod','f-cat','f-obs','f-margem','f-compra','f-venda','f-compra-usd','f-venda-usd'].forEach(id => $(id).value='');
-  $('f-qtd').value = 1;
-  calcPrev();
-  toast('Venda registrada!');
+  const btn = $('btn-save');
+  btn.disabled = true;
+  try {
+    const j = await api('/api/vendas', {method:'POST', body:{
+      produto:prod, categoria:$('f-cat').value.trim(), qtd:parseInt($('f-qtd').value)||1, compra, vendaBase, data,
+      obs:$('f-obs').value.trim(), margem:Math.max(num('f-margem')||0,0), comissaoPct:Math.max(num('f-comissao')||0,0),
+      inputMode, dolar:dolarRate, rateUsed: inputMode==='usd' ? usdRate() : dolarRate
+    }});
+    sales.unshift(j.venda);
+    ['f-prod','f-cat','f-obs','f-margem','f-compra','f-venda','f-compra-usd','f-venda-usd'].forEach(id => $(id).value='');
+    $('f-qtd').value = 1;
+    calcPrev();
+    toast('Venda registrada!');
+  } catch(e) {
+    toast(e.message);
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 // ── HISTÓRICO ──────────────────────────────────────────
@@ -667,13 +752,155 @@ $('twrap').addEventListener('click', e => {
   const t = e.target.closest('button'); if(!t) return;
   if(t.dataset.ask){ pendingDel = +t.dataset.ask; renderTable(); }
   else if(t.dataset.cancel){ pendingDel = null; renderTable(); }
-  else if(t.dataset.del){ sales = sales.filter(v=>v.id!==+t.dataset.del); pendingDel=null; save(); renderTable(); toast('Venda excluída.'); }
+  else if(t.dataset.del){
+    const id = +t.dataset.del;
+    t.disabled = true;
+    api('/api/vendas/'+id, {method:'DELETE'})
+      .then(() => { sales = sales.filter(v=>v.id!==id); toast('Venda excluída.'); })
+      .catch(e => toast(e.message))
+      .finally(() => { pendingDel=null; renderTable(); });
+  }
 });
+
+// ── CONTA / LOGIN ──────────────────────────────────────
+const TELAS = {
+  login:  ['Entrar', 'Acesse sua conta para registrar e acompanhar suas vendas.'],
+  signup: ['Criar conta', 'Cadastre-se com seu e-mail. Suas vendas ficam salvas na sua conta.'],
+  forgot: ['Recuperar senha', 'Informe o e-mail da conta. Vamos enviar um link para você criar uma nova senha.'],
+  reset:  ['Criar nova senha', 'Escolha uma nova senha para a sua conta.'],
+};
+let resetToken = null;
+
+function mostrarMsg(texto, tipo='err'){
+  const m = $('auth-msg');
+  if(!texto){ m.classList.add('hide'); return; }
+  m.textContent = texto; m.className = 'auth-msg ' + tipo;
+}
+
+function mostrarTela(tela, msg, tipo){
+  $('carregando').classList.add('hide');
+  $('app').classList.add('hide');
+  $('auth').classList.remove('hide');
+  $('auth-titulo').textContent = TELAS[tela][0];
+  $('auth-sub').textContent = TELAS[tela][1];
+  document.querySelectorAll('.auth-form').forEach(f => f.classList.toggle('hide', f.id !== 'form-'+tela));
+  mostrarMsg(msg, tipo);
+  const primeiro = document.querySelector('#form-'+tela+' input');
+  if(primeiro) setTimeout(() => primeiro.focus(), 30);
+}
+
+async function entrarNoApp(u){
+  usuario = u;
+  $('user-nome').textContent = u.nome;
+  $('auth').classList.add('hide');
+  $('carregando').classList.remove('hide');
+  try {
+    const j = await api('/api/vendas');
+    sales = j.vendas;
+  } catch(e) {
+    if(e.status === 401) return;
+    sales = [];
+    toast(e.message);
+  }
+  $('carregando').classList.add('hide');
+  $('app').classList.remove('hide');
+  document.querySelector('.tab[data-tab="metrics"]').click();
+}
+
+function sessaoExpirou(){
+  usuario = null; sales = [];
+  mostrarTela('login', 'Sua sessão expirou. Entre novamente.', 'info');
+}
+
+function emCarregamento(form, sim){
+  form.querySelectorAll('button, input').forEach(el => el.disabled = sim);
+}
+
+document.querySelectorAll('.auth [data-view]').forEach(b => b.addEventListener('click', () => {
+  if(b.dataset.view === 'login' && resetToken){ resetToken = null; history.replaceState(null, '', location.pathname); }
+  mostrarTela(b.dataset.view);
+}));
+
+$('form-login').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.currentTarget;
+  emCarregamento(f, true); mostrarMsg('');
+  try {
+    const j = await api('/api/auth/login', {method:'POST', body:{ email:$('l-email').value, senha:$('l-senha').value }});
+    $('l-senha').value = '';
+    await entrarNoApp(j.usuario);
+  } catch(err) { mostrarMsg(err.message); }
+  emCarregamento(f, false);
+});
+
+$('form-signup').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.currentTarget;
+  if($('s-senha').value.length < 8) return mostrarMsg('A senha precisa ter pelo menos 8 caracteres.');
+  if($('s-senha').value !== $('s-senha2').value) return mostrarMsg('As senhas não são iguais.');
+  emCarregamento(f, true); mostrarMsg('');
+  try {
+    const j = await api('/api/auth/signup', {method:'POST', body:{ nome:$('s-nome').value, email:$('s-email').value, senha:$('s-senha').value }});
+    ['s-senha','s-senha2'].forEach(id => $(id).value='');
+    await entrarNoApp(j.usuario);
+    toast('Conta criada. Bem-vindo(a)!');
+  } catch(err) { mostrarMsg(err.message); }
+  emCarregamento(f, false);
+});
+
+$('form-forgot').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.currentTarget;
+  emCarregamento(f, true); mostrarMsg('');
+  try {
+    const j = await api('/api/auth/forgot', {method:'POST', body:{ email:$('f-email-rec').value }});
+    if(j.emailConfigurado === false) mostrarMsg('A recuperação por e-mail ainda não foi ativada neste site. Fale com o administrador para redefinir sua senha.', 'info');
+    else mostrarMsg(j.mensagem, 'ok');
+  } catch(err) { mostrarMsg(err.message); }
+  emCarregamento(f, false);
+});
+
+$('form-reset').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.currentTarget;
+  if($('r-senha').value.length < 8) return mostrarMsg('A senha precisa ter pelo menos 8 caracteres.');
+  if($('r-senha').value !== $('r-senha2').value) return mostrarMsg('As senhas não são iguais.');
+  emCarregamento(f, true); mostrarMsg('');
+  try {
+    const j = await api('/api/auth/reset', {method:'POST', body:{ token:resetToken, senha:$('r-senha').value }});
+    resetToken = null;
+    history.replaceState(null, '', location.pathname);
+    ['r-senha','r-senha2'].forEach(id => $(id).value='');
+    await entrarNoApp(j.usuario);
+    toast('Senha alterada. Você já está conectado.');
+  } catch(err) { mostrarMsg(err.message); }
+  emCarregamento(f, false);
+});
+
+$('btn-sair').addEventListener('click', async () => {
+  try { await api('/api/auth/logout', {method:'POST', body:{}}); } catch(e){}
+  usuario = null; sales = [];
+  mostrarTela('login', 'Você saiu da conta.', 'info');
+});
+
+$('btn-primeira').addEventListener('click', () => document.querySelector('.tab[data-tab="nova"]').click());
 
 // ── INIT ───────────────────────────────────────────────
 { const t=new Date(); $('f-data').value = t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate()); }
 calcPrev();
-renderMetrics();
+(async () => {
+  const p = new URLSearchParams(location.search);
+  if(p.get('reset')){
+    resetToken = p.get('reset');
+    return mostrarTela('reset');
+  }
+  try {
+    const j = await api('/api/auth/me');
+    await entrarNoApp(j.usuario);
+  } catch(e) {
+    mostrarTela('login', e.status === 401 ? '' : e.message);
+  }
+})();
 }
 </script>
 </body>
