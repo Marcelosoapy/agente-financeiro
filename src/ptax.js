@@ -1,4 +1,4 @@
-// Cloudflare Pages Function: GET /api/ptax
+// Rota GET /api/ptax (usada pelo Worker em src/worker.js)
 // Busca a PTAX do dólar (USD/BRL) na API oficial do Banco Central (Olinda)
 // e devolve o boletim mais recente. Se o dia ainda não tem boletim
 // (antes das 10h, fim de semana ou feriado), volta até 8 dias.
@@ -27,7 +27,7 @@ function json(body, status = 200, maxAge = 60) {
   });
 }
 
-export async function onRequestGet() {
+export async function ptax() {
   try {
     for (let i = 0; i < 8; i++) {
       const url = BCB.replace("%DATA%", dataBrasilia(i));

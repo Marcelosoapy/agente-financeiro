@@ -2,7 +2,7 @@
 
 Painel web para anotar vendas e acompanhar resultados: preço de compra e de venda (em R$ ou em US$), margem de negociação, comissão, lucro bruto e líquido, métricas por período e gráficos. A cotação do dólar vem da **PTAX oficial do Banco Central**, atualizada automaticamente.
 
-Feito para rodar no **Cloudflare Pages** (plano gratuito).
+Feito para rodar no **Cloudflare Workers** (plano gratuito).
 
 ---
 
@@ -55,10 +55,10 @@ Cada venda guarda também o dólar usado na conversão, para o histórico não m
 
 ## 3. Cotação PTAX
 
-- A função `functions/api/ptax.js` roda no Cloudflare e consulta a API oficial do Banco Central (Olinda, recurso `CotacaoMoedaDia`). O site chama `/api/ptax`.
+- O Worker (`src/worker.js`) responde em `/api/ptax`. A rota, em `src/ptax.js`, consulta a API oficial do Banco Central (Olinda, recurso `CotacaoMoedaDia`).
 - Ela devolve o **boletim mais recente** do dia (abertura, intermediários ou fechamento). Antes do primeiro boletim, em fins de semana e feriados, usa o último dia útil.
 - O Banco Central publica cerca de 5 boletins por dia, entre 10h e 13h. Fora desse horário o valor fica igual ao do último boletim, e isso é o comportamento correto.
-- Se a função não responder, a página tenta o Banco Central diretamente. Se nada funcionar, dá para informar a cotação manualmente pelo lápis no cartão do dólar.
+- Se a rota não responder, a página tenta o Banco Central diretamente. Se nada funcionar, dá para informar a cotação manualmente pelo lápis no cartão do dólar.
 
 Indicador no cartão: **verde** = PTAX ao vivo · **laranja** = cotação manual · **vermelho** = sem cotação.
 
@@ -68,59 +68,52 @@ Indicador no cartão: **verde** = PTAX ao vivo · **laranja** = cotação manual
 
 ```
 agente-financeiro/
-├── index.html            # o painel completo (HTML, CSS e JavaScript)
-├── functions/
-│   └── api/
-│       └── ptax.js       # função Cloudflare: GET /api/ptax
-├── wrangler.toml         # configuração do projeto no Cloudflare Pages
+├── public/
+│   └── index.html        # o painel completo (HTML, CSS e JavaScript)
+├── src/
+│   ├── worker.js         # Worker: serve o painel e a rota /api/ptax
+│   └── ptax.js           # busca a PTAX no Banco Central
+├── wrangler.toml         # configuração do Worker no Cloudflare
 ├── .gitignore
 └── README.md
 ```
 
-Não há etapa de build: os arquivos são publicados como estão. O único recurso externo é a biblioteca de gráficos Chart.js (via cdnjs).
+Não há etapa de build: o Cloudflare publica os arquivos como estão. O único recurso externo é a biblioteca de gráficos Chart.js (via cdnjs).
 
 ---
 
-## 5. Publicar no Cloudflare Pages
-
-> Importante: **não use o "arrastar e soltar" do painel do Cloudflare**. Esse método não publica a pasta `functions`, e a PTAX não funcionaria. Use a opção A ou B.
+## 5. Publicar no Cloudflare Workers
 
 ### Opção A: pelo GitHub (recomendada, publica sozinho a cada alteração)
 
-1. Repositório: `Marcelosoapy/agente-financeiro`.
-2. Envie os arquivos. Pelo navegador: no repositório, **Add file → Upload files**, arraste o *conteúdo* da pasta (incluindo a pasta `functions`) e confirme. Pelo terminal:
-   ```bash
-   cd agente-financeiro
-   git init
-   git add .
-   git commit -m "Agente de vendas: primeira versão"
-   git branch -M main
-   git remote add origin https://github.com/Marcelosoapy/agente-financeiro.git
-   git push -u origin main
-   ```
-3. No Cloudflare: **Workers & Pages → Create → Pages → Connect to Git** e escolha o repositório.
-4. Configuração de build:
-   - Framework preset: **None**
+1. No Cloudflare: **Workers & Pages → Create → Import a repository** e escolha `Marcelosoapy/agente-financeiro`.
+2. Configuração:
+   - Project name: `agente-financeiro` (igual ao `name` do `wrangler.toml`)
    - Build command: *(deixe vazio)*
-   - Build output directory: `/`
-5. Clique em **Save and Deploy**. Em cerca de 1 minuto o site estará em `https://agente-financeiro.pages.dev` (ou nome parecido).
+   - Deploy command: `npx wrangler deploy`
+   - Root directory: `/`
+3. Clique em **Deploy**. Em cerca de 1 minuto o site estará em `https://agente-financeiro.SEU-SUBDOMINIO.workers.dev`.
 
-### Opção B: pelo terminal, sem GitHub (Wrangler)
+Cada `push` na branch `main` publica uma nova versão automaticamente.
+
+### Opção B: pelo terminal (Wrangler)
 
 Precisa do Node.js instalado.
 
 ```bash
+git clone https://github.com/Marcelosoapy/agente-financeiro.git
 cd agente-financeiro
 npx wrangler login
-npx wrangler pages project create agente-financeiro
-npx wrangler pages deploy .
+npx wrangler deploy
 ```
+
+Para testar no computador antes de publicar: `npx wrangler dev` e abra `http://localhost:8787`.
 
 ---
 
 ## 6. Conferir se está funcionando
 
-1. Abra `https://SEU-PROJETO.pages.dev/api/ptax`. Deve aparecer algo como:
+1. Abra `https://agente-financeiro.SEU-SUBDOMINIO.workers.dev/api/ptax`. Deve aparecer algo como:
    ```json
    {"fonte":"Banco Central do Brasil - PTAX","venda":5.3338,"compra":5.3332,"boletim":"Fechamento","dataHora":"2026-11-25 13:09:28.123","boletinsDoDia":5}
    ```
@@ -139,6 +132,6 @@ npx wrangler pages deploy .
 
 ## 8. Personalizar
 
-- **Intervalo de atualização da PTAX:** em `index.html`, procure `setInterval(updateRate, 120000)` (120000 ms = 2 min).
-- **Cache da função:** em `functions/api/ptax.js`, `max-age=60` e `cacheTtl: 60` (segundos).
-- **Cores dos gráficos:** procure `#94a3b8` (custo), `#f59e0b` (comissão), `#22c55e` (lucro) e `#3b82f6` (receita) em `index.html`.
+- **Intervalo de atualização da PTAX:** em `public/index.html`, procure `setInterval(updateRate, 120000)` (120000 ms = 2 min).
+- **Cache da cotação:** em `src/ptax.js`, `max-age=60` e `cacheTtl: 60` (segundos).
+- **Cores dos gráficos:** procure `#94a3b8` (custo), `#f59e0b` (comissão), `#22c55e` (lucro) e `#3b82f6` (receita) em `public/index.html`.
