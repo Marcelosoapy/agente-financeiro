@@ -25,15 +25,14 @@ Feito para rodar no **Cloudflare Workers** (plano gratuito).
 | Filtros | Tudo, hoje, 7 dias, 30 dias, mês atual ou intervalo de datas |
 | Gráficos | Receita por dia (custo + comissão + lucro), divisão da receita, receita e comissão por categoria |
 | Funil de produtos | Ranking dos produtos que mais vendem no período, por quantidade, receita ou lucro líquido |
-| Histórico | Busca por produto, categoria ou observação (sem diferenciar acentos e maiúsculas; números comparados por inteiro), ordenação e exclusão |
+| Histórico | Busca por produto, categoria ou observação (sem diferenciar acentos e maiúsculas; números comparados por inteiro), ordenação, edição e exclusão |
 
 **Fora do escopo (nesta versão)**
 
 - Equipes (várias pessoas na mesma conta) e níveis de acesso
-- Editar uma venda já registrada (hoje: excluir e registrar de novo)
 - Emissão de nota fiscal, controle de estoque, exportação de relatórios
 
-**Possíveis próximas etapas:** editar vendas, exportação CSV/Excel, trocar senha e e-mail logado, metas mensais, login com Google.
+**Possíveis próximas etapas:** exportação CSV/Excel, trocar senha e e-mail logado, metas mensais, login com Google.
 
 ---
 
@@ -75,7 +74,7 @@ agente-financeiro/
 ├── src/
 │   ├── worker.js         # Worker: roteia /api/* e serve o painel
 │   ├── auth.js           # contas: criar, entrar, sair, esqueci e redefinir senha
-│   ├── vendas.js         # vendas do usuário logado (listar, criar, excluir)
+│   ├── vendas.js         # vendas do usuário logado (listar, criar, editar, excluir)
 │   ├── db.js             # tabelas do banco D1 (criadas sozinhas no 1º acesso)
 │   ├── email.js          # e-mail de recuperação de senha (Resend)
 │   ├── ptax.js           # busca a PTAX no Banco Central
@@ -183,6 +182,7 @@ Alternativa: o **Email Sending** do próprio Cloudflare também serve, mas para 
 | POST | `/api/auth/reset` | `{token, senha}` define a nova senha |
 | GET | `/api/vendas` | Vendas do usuário logado |
 | POST | `/api/vendas` | `{produto, categoria, qtd, compra, vendaBase, margem, comissaoPct, data, obs, inputMode, dolar, rateUsed}` |
+| PUT | `/api/vendas/:id` | Edita uma venda do usuário (mesmos campos do POST) |
 | DELETE | `/api/vendas/:id` | Exclui uma venda do usuário |
 
 ---

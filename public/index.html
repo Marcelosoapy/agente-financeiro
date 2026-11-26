@@ -134,6 +134,14 @@ tr:hover td{background:var(--bg2)}
 .delbtn{background:none;border:none;cursor:pointer;color:var(--txt3);padding:3px 6px;border-radius:4px}
 .delbtn:hover{color:var(--red)}
 .confirm-del{display:flex;gap:4px}
+.acoes{display:flex;gap:2px;justify-content:flex-end}
+.editbtn{background:none;border:none;cursor:pointer;color:var(--txt3);padding:3px 6px;border-radius:4px}
+.editbtn:hover{color:var(--txt)}
+tr.editando td{background:var(--bg2)}
+.edit-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fef3c7;color:#78350f;border:0.5px solid #fcd34d;border-radius:var(--radius);padding:10px 12px;font-size:13px;margin-bottom:12px}
+.edit-banner button{background:transparent;border:0.5px solid #b45309;color:#78350f;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer}
+.btn-row{display:flex;gap:8px}
+.btn-row .btn{flex:1}
 .confirm-del button{font-size:11px;padding:3px 8px;border-radius:4px;border:0.5px solid var(--border2);background:transparent;color:var(--txt);cursor:pointer}
 .confirm-del button.yes{color:var(--red);border-color:var(--red)}
 .empty{text-align:center;padding:2.5rem;color:var(--txt2)}
@@ -339,7 +347,11 @@ mark{background:#fde68a;color:#713f12;border-radius:2px;padding:0 1px}
 
 <!-- NOVA VENDA -->
 <div id="tab-nova" class="sec">
-  <p class="stitle">Registrar nova venda</p>
+  <p class="stitle" id="nova-titulo">Registrar nova venda</p>
+  <div class="edit-banner hide" id="edit-banner" role="status">
+    <span id="edit-banner-txt"></span>
+    <button type="button" id="btn-cancelar-edicao">Cancelar edição</button>
+  </div>
   <div class="mode-row">
     <button class="mmode on" id="mode-brl" data-mode="brl">Preços em R$ (Real)</button>
     <button class="mmode" id="mode-usd" data-mode="usd">Preços em US$ (Dólar)</button>
@@ -414,10 +426,13 @@ mark{background:#fde68a;color:#713f12;border-radius:2px;padding:0 1px}
     <div class="pi" id="pi-ll"><div class="pv">R$ 0,00</div><div class="pk">Lucro líquido</div></div>
     <div class="pi" id="pi-p"><div class="pv">0%</div><div class="pk">Margem sobre compra</div></div>
   </div>
-  <button class="btn" id="btn-save">
-    <svg class="ic lg" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-    Salvar venda
-  </button>
+  <div class="btn-row">
+    <button class="btn" id="btn-save">
+      <svg class="ic lg" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <span id="btn-save-txt">Salvar venda</span>
+    </button>
+    <button class="btn hide" id="btn-cancelar" type="button" style="flex:0 0 auto;padding:0 18px">Cancelar</button>
+  </div>
 </div>
 
 <!-- HISTÓRICO -->
@@ -745,7 +760,7 @@ function getBrlPrices(){
     return {compra:c, venda:v};
   }
   const r = usdRate(), cu = num('f-compra-usd')||0, vu = num('f-venda-usd')||0;
-  $('conv-rate-badge').textContent = r>0 ? 'Cotação: '+fmtRate(r)+(num('f-dolar-custom')>0?' (manual)':' (PTAX)') : 'Cotação indisponível: informe o dólar abaixo';
+  $('conv-rate-badge').textContent = r>0 ? 'Cotação: '+fmtRate(r)+(num('f-dolar-custom')>0 ? (editandoId ? ' (da venda)' : ' (manual)') : ' (PTAX)') : 'Cotação indisponível: informe o dólar abaixo';
   $('hint-compra').textContent = r>0 && cu>0 ? '≈ '+fmt(cu*r) : '';
   $('hint-venda').textContent  = r>0 && vu>0 ? '≈ '+fmt(vu*r) : '';
   return {compra:cu*r, venda:vu*r};
@@ -773,6 +788,67 @@ function calcPrev(){
   setPi('pi-p', pct, fmtPct(pct));
 }
 
+// ── EDIÇÃO DE VENDA ────────────────────────────────────
+let editandoId = null;
+const hojeISO = () => { const t=new Date(); return t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate()); };
+
+function limparFormulario(){
+  ['f-prod','f-cat','f-obs','f-margem','f-compra','f-venda','f-compra-usd','f-venda-usd'].forEach(id => $(id).value='');
+  $('f-qtd').value = 1;
+  calcPrev();
+}
+
+function sairDaEdicao(){
+  editandoId = null;
+  $('edit-banner').classList.add('hide');
+  $('btn-cancelar').classList.add('hide');
+  $('nova-titulo').textContent = 'Registrar nova venda';
+  $('btn-save-txt').textContent = 'Salvar venda';
+  ['f-comissao','f-dolar-custom'].forEach(id => $(id).value='');
+  $('f-data').value = hojeISO();
+  limparFormulario();
+}
+
+function iniciarEdicao(id){
+  const v = sales.find(x => x.id === id);
+  if(!v) return;
+  editandoId = id;
+  const usd = v.inputMode === 'usd' && v.rateUsed > 0;
+  setMode(usd ? 'usd' : 'brl');
+  $('f-prod').value = v.produto;
+  $('f-cat').value = v.categoria || '';
+  $('f-qtd').value = v.qtd;
+  $('f-data').value = v.data;
+  $('f-obs').value = v.obs || '';
+  $('f-margem').value = v.margem || '';
+  $('f-comissao').value = v.comissaoPct || '';
+  const base = v.vendaBase ?? v.venda;
+  const r2 = n => Math.round(n*100)/100;
+  if(usd){
+    // mantém o dólar da venda original, para os valores em R$ não mudarem sozinhos
+    $('f-dolar-custom').value = v.rateUsed;
+    $('f-compra-usd').value = r2(v.compra / v.rateUsed);
+    $('f-venda-usd').value = r2(base / v.rateUsed);
+  } else {
+    $('f-compra').value = r2(v.compra);
+    $('f-venda').value = r2(base);
+  }
+  const dp = v.data.split('-');
+  $('edit-banner-txt').textContent = 'Editando a venda de "' + v.produto + '" de ' + dp[2]+'/'+dp[1]+'/'+dp[0] + '.';
+  $('edit-banner').classList.remove('hide');
+  $('btn-cancelar').classList.remove('hide');
+  $('nova-titulo').textContent = 'Editar venda';
+  $('btn-save-txt').textContent = 'Salvar alterações';
+  calcPrev();
+  document.querySelector('.tab[data-tab="nova"]').click();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+['btn-cancelar','btn-cancelar-edicao'].forEach(id => $(id).addEventListener('click', () => {
+  sairDaEdicao();
+  document.querySelector('.tab[data-tab="lista"]').click();
+}));
+
 $('btn-save').addEventListener('click', async () => {
   const prod = $('f-prod').value.trim();
   const data = $('f-data').value;
@@ -781,19 +857,29 @@ $('btn-save').addEventListener('click', async () => {
     toast(inputMode==='usd' && !usdRate() ? 'Sem cotação do dólar: informe o valor usado na conversão.' : 'Preencha produto, preços e data.');
     return;
   }
+  const original = editandoId ? sales.find(x => x.id === editandoId) : null;
+  const body = {
+    produto:prod, categoria:$('f-cat').value.trim(), qtd:parseInt($('f-qtd').value)||1, compra, vendaBase, data,
+    obs:$('f-obs').value.trim(), margem:Math.max(num('f-margem')||0,0), comissaoPct:Math.max(num('f-comissao')||0,0),
+    inputMode,
+    dolar: original ? original.dolar : dolarRate,
+    rateUsed: inputMode==='usd' ? usdRate() : (original ? original.rateUsed : dolarRate)
+  };
   const btn = $('btn-save');
   btn.disabled = true;
   try {
-    const j = await api('/api/vendas', {method:'POST', body:{
-      produto:prod, categoria:$('f-cat').value.trim(), qtd:parseInt($('f-qtd').value)||1, compra, vendaBase, data,
-      obs:$('f-obs').value.trim(), margem:Math.max(num('f-margem')||0,0), comissaoPct:Math.max(num('f-comissao')||0,0),
-      inputMode, dolar:dolarRate, rateUsed: inputMode==='usd' ? usdRate() : dolarRate
-    }});
-    sales.unshift(j.venda);
-    ['f-prod','f-cat','f-obs','f-margem','f-compra','f-venda','f-compra-usd','f-venda-usd'].forEach(id => $(id).value='');
-    $('f-qtd').value = 1;
-    calcPrev();
-    toast('Venda registrada!');
+    if(editandoId){
+      const j = await api('/api/vendas/'+editandoId, {method:'PUT', body});
+      sales = sales.map(x => x.id === j.venda.id ? j.venda : x);
+      sairDaEdicao();
+      document.querySelector('.tab[data-tab="lista"]').click();
+      toast('Venda atualizada!');
+    } else {
+      const j = await api('/api/vendas', {method:'POST', body});
+      sales.unshift(j.venda);
+      limparFormulario();
+      toast('Venda registrada!');
+    }
   } catch(e) {
     toast(e.message);
   } finally {
@@ -845,10 +931,11 @@ function renderTable(){
     <thead><tr><th>Data</th><th>Produto</th><th>Categoria</th><th class="num">Qtd</th><th class="num">Compra</th><th class="num">Venda</th><th class="num">Comissão</th><th class="num">Lucro líq.</th><th>Margem</th><th></th></tr></thead>
     <tbody>${vf.map(v => {
       const l = lucroLiq(v), pct = v.compra>0 ? (v.venda-v.compra)/v.compra*100 : 0, dp = v.data.split('-');
+      const editar = `<button class="editbtn" data-edit="${v.id}" title="Editar" aria-label="Editar venda"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.8 2.8 0 0 0-4-4L4 16v4M13.5 6.5l4 4"/></svg></button>`;
       const del = pendingDel===v.id
         ? `<div class="confirm-del"><button class="yes" data-del="${v.id}">Excluir</button><button data-cancel="1">Não</button></div>`
         : `<button class="delbtn" data-ask="${v.id}" title="Excluir" aria-label="Excluir venda"><svg class="ic" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`;
-      return `<tr>
+      return `<tr${v.id===editandoId?' class="editando"':''}>
         <td>${dp[2]}/${dp[1]}/${dp[0]}</td>
         <td style="font-weight:500;white-space:normal">${destacar(v.produto,q)}${v.obs?`<span class="obs-linha">${destacar(v.obs,q)}</span>`:''}</td>
         <td>${destacar(v.categoria||'—',q)}</td>
@@ -858,19 +945,20 @@ function renderTable(){
         <td class="num" style="color:var(--amber)">${fmt(v.comissao||0)}${v.comissaoPct?`<div style="font-size:10px;color:var(--txt3)">${v.comissaoPct}%</div>`:''}</td>
         <td class="num" style="color:${l>=0?'var(--green)':'var(--red)'};font-weight:600">${fmt(l)}</td>
         <td><span class="badge ${pct>=0?'g':'r'}">${pct.toFixed(1)}%</span></td>
-        <td>${del}</td>
+        <td><div class="acoes">${pendingDel===v.id ? '' : editar}${del}</div></td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
 }
 $('twrap').addEventListener('click', e => {
   const t = e.target.closest('button'); if(!t) return;
+  if(t.dataset.edit){ pendingDel = null; iniciarEdicao(+t.dataset.edit); return; }
   if(t.dataset.ask){ pendingDel = +t.dataset.ask; renderTable(); }
   else if(t.dataset.cancel){ pendingDel = null; renderTable(); }
   else if(t.dataset.del){
     const id = +t.dataset.del;
     t.disabled = true;
     api('/api/vendas/'+id, {method:'DELETE'})
-      .then(() => { sales = sales.filter(v=>v.id!==id); toast('Venda excluída.'); })
+      .then(() => { sales = sales.filter(v=>v.id!==id); if(editandoId===id) sairDaEdicao(); toast('Venda excluída.'); })
       .catch(e => toast(e.message))
       .finally(() => { pendingDel=null; renderTable(); });
   }
@@ -1001,7 +1089,7 @@ $('form-reset').addEventListener('submit', async e => {
 
 $('btn-sair').addEventListener('click', async () => {
   try { await api('/api/auth/logout', {method:'POST', body:{}}); } catch(e){}
-  usuario = null; sales = [];
+  usuario = null; sales = []; sairDaEdicao();
   mostrarTela('login', 'Você saiu da conta.', 'info');
 });
 
