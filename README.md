@@ -40,7 +40,7 @@ Feito para rodar no **Cloudflare Workers** (plano gratuito).
 
 | Item | Fórmula |
 |---|---|
-| Conversão US$ → R$ | valor em US$ × dólar usado (PTAX de venda com 2 casas decimais, cortada sem arredondar: 5,7750 → 5,77; ou o valor informado) |
+| Conversão US$ → R$ | valor em US$ × dólar usado (PTAX de venda com 2 casas decimais, cortando as casas extras e arredondando para cima quando elas forem 90 ou mais: 5,7750 → 5,77; 5,7790 → 5,78; ou o valor informado) |
 | Venda final (unitária) | preço de venda × (1 + margem de negociação %) |
 | Receita da venda | venda final × quantidade |
 | Custo da venda | preço de compra × quantidade |

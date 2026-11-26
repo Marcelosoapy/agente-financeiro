@@ -441,7 +441,9 @@ async function api(caminho, {method='GET', body} = {}){
 // ── UTILS ──────────────────────────────────────────────
 const fmt = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtUsd = v => 'US$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-const duasCasas = v => Math.floor(Number(v)*100 + 1e-9) / 100; // corta em 2 casas: 5,7750 -> 5,77
+// PTAX com 2 casas: corta as casas extras, mas arredonda para cima quando elas forem 90 ou mais
+// 5,7750 -> 5,77 · 5,7789 -> 5,77 · 5,7790 -> 5,78 · 5,7795 -> 5,78
+const duasCasas = v => { const c = Math.round(Number(v)*10000); const base = Math.floor(c/100); return (c%100 >= 90 ? base+1 : base) / 100; };
 const fmtRate = v => 'R$ ' + duasCasas(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtPct = v => (v>=0?'+':'') + Number(v).toFixed(1) + '%';
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
