@@ -137,6 +137,24 @@ tr:hover td{background:var(--bg2)}
 .confirm-del button{font-size:11px;padding:3px 8px;border-radius:4px;border:0.5px solid var(--border2);background:transparent;color:var(--txt);cursor:pointer}
 .confirm-del button.yes{color:var(--red);border-color:var(--red)}
 .empty{text-align:center;padding:2.5rem;color:var(--txt2)}
+
+/* FUNIL DE PRODUTOS */
+.funil-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.funil-head h3{margin:0}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.funil-row{display:grid;grid-template-columns:24px minmax(0,170px) minmax(0,1fr) 156px;gap:12px;align-items:center;padding:3px 0}
+.funil-pos{font-size:12px;color:var(--txt3);text-align:right;font-variant-numeric:tabular-nums}
+.funil-nome{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.funil-nome small{display:block;font-size:11px;font-weight:400;color:var(--txt3)}
+.funil-trilha{display:flex;justify-content:center}
+.funil-barra{height:30px;border-radius:6px;background:#3b82f6;min-width:6px;transition:width .35s ease}
+.funil-barra.outros{background:#94a3b8}
+.funil-val{text-align:right;font-variant-numeric:tabular-nums}
+.funil-val b{display:block;font-size:13px;font-weight:600;white-space:nowrap}
+.funil-val span{font-size:11px;color:var(--txt3);white-space:nowrap}
+.funil-nota{font-size:11px;color:var(--txt3);margin-top:10px}
+@media(max-width:600px){.funil-row{grid-template-columns:20px minmax(0,1fr) 112px}.funil-trilha{grid-column:2 / 4;order:5}.funil-val span{white-space:normal}}
+@media(prefers-reduced-motion:reduce){.funil-barra{transition:none}}
 .srow{display:flex;align-items:center;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
 .srow input,.srow select{height:32px;font-size:12px;padding:0 10px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--txt)}
 .srow input{width:200px}
@@ -298,6 +316,17 @@ tr:hover td{background:var(--bg2)}
       <div class="legend" id="pizza-legend"></div>
       <div style="position:relative;height:180px"><canvas id="cPizza" role="img" aria-label="Divisão da receita entre custo, comissão e lucro líquido"></canvas></div>
     </div>
+  </div>
+  <div class="cc" style="margin-bottom:12px">
+    <div class="funil-head">
+      <h3>Funil de produtos</h3>
+      <div class="seg" id="funil-metrica" role="group" aria-label="Ordenar o funil por">
+        <button class="fb on" type="button" data-m="qtd">Quantidade</button>
+        <button class="fb" type="button" data-m="receita">Receita</button>
+        <button class="fb" type="button" data-m="lucro">Lucro líquido</button>
+      </div>
+    </div>
+    <div id="funil"></div>
   </div>
   <div class="cc" style="margin-bottom:.75rem">
     <h3>Receita e comissão por categoria</h3>
@@ -537,12 +566,12 @@ document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () =>
 }));
 
 // ── PERIOD ─────────────────────────────────────────────
-document.querySelectorAll('.fb').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('.fb').forEach(x=>x.classList.remove('on'));
+document.querySelectorAll('.frow .fb').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.frow .fb').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); period=b.dataset.p; renderMetrics();
 }));
 ['d-ini','d-fim'].forEach(id => $(id).addEventListener('change', () => {
-  document.querySelectorAll('.fb').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.frow .fb').forEach(x=>x.classList.remove('on'));
   period='custom'; renderMetrics();
 }));
 
@@ -587,7 +616,56 @@ function renderMetrics(){
     <div class="mcard"><div class="mk">Ticket médio</div><div class="mv">${fmt(ticket)}</div></div>
     <div class="mcard"><div class="mk">Melhor margem</div><div class="mv" style="font-size:13px;padding-top:3px">${melhor?esc(melhor.produto):'—'}</div><div class="ms">${melhor&&melhor.compra>0?fmtPct(mrg(melhor)*100):''}</div></div>`;
   renderCharts(vf, custo, comissao, liquido, receita);
+  renderFunil(vf);
 }
+
+// ── FUNIL DE PRODUTOS ──────────────────────────────────
+let funilMetrica = 'qtd';
+const FUNIL_MAX = 10;
+const FUNIL_ROTULO = { qtd:'das un.', receita:'da receita', lucro:'do lucro' };
+
+function renderFunil(vf){
+  const box = $('funil');
+  const mapa = new Map();
+  vf.forEach(v => {
+    const chave = String(v.produto||'').trim().toLowerCase();
+    const o = mapa.get(chave) || { nome:'', cat:'', primeiro:Infinity, qtd:0, receita:0, lucro:0, vendas:0 };
+    if(v.id < o.primeiro){ o.primeiro = v.id; o.nome = String(v.produto||'').trim(); o.cat = v.categoria||''; } // nome da 1ª venda registrada
+    o.qtd += v.qtd; o.receita += v.venda*v.qtd; o.lucro += lucroLiq(v); o.vendas += 1;
+    mapa.set(chave, o);
+  });
+  let lista = [...mapa.values()].sort((a,b) => b[funilMetrica]-a[funilMetrica] || b.receita-a.receita);
+  if(!lista.length){ box.innerHTML = '<div class="empty" style="padding:1.5rem">Nenhuma venda no período escolhido.</div>'; return; }
+
+  const total = lista.reduce((s,o) => s + Math.max(o[funilMetrica],0), 0) || 1;
+  let outros = null;
+  if(lista.length > FUNIL_MAX + 1){
+    const resto = lista.slice(FUNIL_MAX);
+    outros = resto.reduce((o,p) => (o.qtd+=p.qtd, o.receita+=p.receita, o.lucro+=p.lucro, o.vendas+=p.vendas, o), { nome:'Outros', cat:resto.length+' produtos', qtd:0, receita:0, lucro:0, vendas:0, outros:true });
+    lista = lista.slice(0, FUNIL_MAX);
+  }
+  const topo = Math.max(lista[0][funilMetrica], 0) || 1;
+  const principal = o => funilMetrica==='qtd' ? o.qtd.toLocaleString('pt-BR')+' un.' : fmt(o[funilMetrica]);
+  const secundario = o => funilMetrica==='qtd' ? fmt(o.receita) : o.qtd.toLocaleString('pt-BR')+' un.';
+  const linha = (o, i) => {
+    const v = o[funilMetrica], larg = Math.max(0, Math.min(100, v/topo*100));
+    const share = (Math.max(v,0)/total*100).toFixed(0);
+    const cor = o.outros ? '' : ` style="width:${larg}%;opacity:${(1 - i*0.06).toFixed(2)}"`;
+    return `<div class="funil-row">
+      <div class="funil-pos">${o.outros ? '' : (i+1)+'º'}</div>
+      <div class="funil-nome" title="${esc(o.nome)}">${esc(o.nome)}<small>${esc(o.cat||'—')} · ${o.vendas} ${o.vendas===1?'venda':'vendas'}</small></div>
+      <div class="funil-trilha"><div class="funil-barra${o.outros?' outros':''}"${o.outros ? ` style="width:${larg}%"` : cor}></div></div>
+      <div class="funil-val"><b style="${v<0?'color:var(--red)':''}">${principal(o)}</b><span>${secundario(o)} · ${share}% ${FUNIL_ROTULO[funilMetrica]}</span></div>
+    </div>`;
+  };
+  box.innerHTML = lista.map(linha).join('') + (outros ? linha(outros, FUNIL_MAX) : '') +
+    `<div class="funil-nota">${mapa.size} ${mapa.size===1?'produto':'produtos'} no período. A largura de cada barra é proporcional ao 1º colocado.</div>`;
+}
+
+document.querySelectorAll('#funil-metrica .fb').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#funil-metrica .fb').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); funilMetrica = b.dataset.m; renderFunil(getFiltered());
+}));
 
 // ── CHARTS ─────────────────────────────────────────────
 const isDark = () => { const t=document.documentElement.dataset.theme; return t ? t==='dark' : matchMedia('(prefers-color-scheme:dark)').matches; };
